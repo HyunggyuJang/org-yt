@@ -133,62 +133,8 @@ See `org-display-user-inline-images' for a description of :image-data-fun."
     (org-yt-get-image (format "http://img.youtube.com/vi/%s/0.jpg" link))))
 
 (org-link-set-parameters org-yt-url-protocol
-			 :follow #'org-yt-follow
-			 :image-data-fun #'org-yt-image-data-fun)
-
-(require 'subr-x)
-
-(defun org-display-user-inline-images (&optional _include-linked _refresh beg end)
-  "Like `org-display-inline-images' but for image data links.
-_INCLUDE-LINKED and _REFRESH are ignored.
-Restrict to region between BEG and END if both are non-nil.
-Image data links have a :image-data-fun parameter.
-\(See `org-link-set-parameters'.)
-The value of the :image-data-fun parameter is a function
-taking the PROTOCOL, the LINK, and the DESCRIPTION as arguments.
-If that function returns nil the link is not interpreted as image.
-Otherwise the return value is the image data string to be displayed.
-
-Note that only bracket links are allowed as image data links
-with one of the formats [[PROTOCOL:LINK]] or [[PROTOCOL:LINK][DESCRIPTION]] are recognized."
-  (interactive)
-  (when (and (called-interactively-p 'any)
-             (use-region-p))
-    (setq beg (region-beginning)
-          end (region-end)))
-  (when (display-graphic-p)
-    (org-with-wide-buffer
-     (goto-char (or beg (point-min)))
-     (when-let ((image-data-link-parameters
-		 (cl-loop for link-par-entry in org-link-parameters
-			  with fun
-			  when (setq fun (plist-get (cdr link-par-entry) :image-data-fun))
-			  collect (cons (car link-par-entry) fun)))
-		(image-data-link-re (regexp-opt (mapcar 'car image-data-link-parameters)))
-		(re (format "\\[\\[\\(%s\\):\\([^]]+\\)\\]\\(?:\\[\\([^]]+\\)\\]\\)?\\]"
-			    image-data-link-re)))
-       (while (re-search-forward re end t)
-         (let* ((protocol (match-string-no-properties 1))
-		(link (match-string-no-properties 2))
-		(description (match-string-no-properties 3))
-		(image-data-link (assoc-string protocol image-data-link-parameters))
-		(el (save-excursion (goto-char (match-beginning 1)) (org-element-context)))
-		image-data)
-           (when el
-             (setq image-data
-                   (or (let ((old (get-char-property-and-overlay
-                                   (org-element-property :begin el)
-                                   'org-image-overlay)))
-                         (and old
-                              (car-safe old)
-                              (overlay-get (cdr old) 'display)))
-		       (funcall (cdr image-data-link) protocol link description)))
-             (when image-data
-               (let ((ol (org-image-update-overlay image-data el t t)))
-                 (when (and ol description)
-                   (overlay-put ol 'after-string description)))))))))))
-
-(advice-add #'org-display-inline-images :after #'org-display-user-inline-images)
+                         :follow #'org-yt-follow
+                         :image-data-fun #'org-yt-image-data-fun)
 
 (provide 'org-yt)
 ;;; org-yt.el ends here
